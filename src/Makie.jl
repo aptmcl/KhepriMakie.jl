@@ -5,6 +5,7 @@ const MakieId = Any
 const MakieIds = Vector{MakieId}
 const MakieRef = GenericRef{MakieKey, MakieId}
 const MakieRefs = Vector{MakieRef}
+const MakieNativeRef = NativeRef{MakieKey, MakieId}
 
 create_makie_scene() =
   let scene = Scene(clear=true, visible=true, backgroundcolor=:white, resolution=(50,50)),
@@ -31,7 +32,7 @@ create_makie_scene() =
 
 const MKE = MakieBackend
 
-KhepriBase.void_ref(b::MKE) = nothing
+KhepriBase.void_ref(b::MKE) = MakieNativeRef(nothing)
 KhepriBase.realization_type(::Type{MKE}) = EagerRealization()
 
 const makie = MKE()
