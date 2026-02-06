@@ -2,7 +2,7 @@
 # Run this interactively to see the output
 
 using Pkg
-Pkg.activate("/home/aml/Projects/Khepri/Julia/KhepriMakie")
+Pkg.activate(joinpath(@__DIR__, ".."))
 
 using KhepriMakie
 using KhepriBase
