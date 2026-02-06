@@ -1,10 +1,21 @@
 name = "KhepriMakie"
 uuid = "9019584d-6ad9-494d-aeba-9d545f8d432d"
 authors = ["António Menezes Leitão <antonio.menezes.leitao@gmail.com>"]
-version = "0.1.0"
+version = "0.2.0"
+
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+KhepriBase = "4cc0fe96-1163-46f3-ba32-de1e65d9548f"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [compat]
-julia = "1.8"
+CairoMakie = "0.11, 0.12, 0.13"
+ColorTypes = "0.11, 0.12"
+KhepriBase = "0.6"
+Makie = "0.20, 0.21, 0.22"
+julia = "1.9"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
