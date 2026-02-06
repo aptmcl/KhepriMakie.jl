@@ -1,6 +1,102 @@
+# KhepriMakie tests - Tests for Makie visualization backend
+
 using KhepriMakie
+using KhepriBase
+using Makie: Point3f, RGBf, RGBAf
 using Test
 
 @testset "KhepriMakie.jl" begin
-    # Write your tests here.
+
+  @testset "Backend initialization" begin
+    @test makie isa KhepriBase.Backend
+    @test KhepriBase.backend_name(makie) == "Makie"
+    @test KhepriBase.void_ref(makie) isa KhepriBase.NativeRef
+  end
+
+  @testset "Backend fields" begin
+    @test hasfield(typeof(makie), :refs)
+    @test makie.refs isa KhepriBase.References
+    @test hasfield(typeof(makie), :shapes)
+    @test hasfield(typeof(makie), :layers)
+    @test hasfield(typeof(makie), :view)
+    @test hasfield(typeof(makie), :figure)
+    @test hasfield(typeof(makie), :axis)
+    @test hasfield(typeof(makie), :use_3d)
+    @test hasfield(typeof(makie), :transaction)
+  end
+
+  @testset "Lazy initialization" begin
+    fresh_backend = KhepriMakie.MakieBackend()
+    @test isnothing(fresh_backend.figure)
+    @test isnothing(fresh_backend.axis)
+    @test fresh_backend.use_3d == true
+  end
+
+  @testset "Type system" begin
+    @test isdefined(KhepriMakie, :MakieKey)
+    @test isdefined(KhepriMakie, :MakieId)
+    @test isdefined(KhepriMakie, :MakieRef)
+    @test isdefined(KhepriMakie, :MakieNativeRef)
+    @test KhepriMakie.MKE === KhepriMakie.MakieBackend
+  end
+
+  @testset "Helper functions" begin
+    @test isdefined(KhepriMakie, :mkpoint)
+    @test isdefined(KhepriMakie, :mkpoints)
+    @test isdefined(KhepriMakie, :mkcolor)
+    @test isdefined(KhepriMakie, :circle_points)
+    @test isdefined(KhepriMakie, :arc_points)
+    @test isdefined(KhepriMakie, :spline_points)
+  end
+
+  @testset "Scene management" begin
+    @test isdefined(KhepriMakie, :create_makie_scene_2d)
+    @test isdefined(KhepriMakie, :create_makie_scene_3d)
+    @test isdefined(KhepriMakie, :ensure_scene)
+    @test isdefined(KhepriMakie, :set_2d_mode)
+    @test isdefined(KhepriMakie, :set_3d_mode)
+    @test isdefined(KhepriMakie, :clear_view)
+    @test isdefined(KhepriMakie, :update_view)
+  end
+
+  @testset "Render settings" begin
+    @test hasfield(typeof(makie), :date)
+    @test hasfield(typeof(makie), :place)
+    @test hasfield(typeof(makie), :render_env)
+    @test hasfield(typeof(makie), :ground_level)
+  end
+
+  @testset "Coordinate conversion" begin
+    p = xyz(1.0, 2.0, 3.0)
+    mp = KhepriMakie.mkpoint(p)
+    @test mp isa Point3f
+    @test mp[1] ≈ 1.0
+    @test mp[2] ≈ 2.0
+    @test mp[3] ≈ 3.0
+  end
+
+  @testset "Color conversion" begin
+    @test KhepriMakie.mkcolor(nothing) == :gray
+    @test KhepriMakie.mkcolor(rgb(1, 0, 0)) isa RGBf
+    @test KhepriMakie.mkcolor(rgba(1, 0, 0, 0.5)) isa RGBAf
+  end
+
+  @testset "Circle points generation" begin
+    c = xyz(0, 0, 0)
+    pts = KhepriMakie.circle_points(c, 1.0, 8)
+    @test length(pts) == 9  # n+1 points for closed circle
+    # First and last should be same
+    @test pts[1].x ≈ pts[end].x atol=1e-10
+    @test pts[1].y ≈ pts[end].y atol=1e-10
+  end
+
+  @testset "Arc points generation" begin
+    c = xyz(0, 0, 0)
+    pts = KhepriMakie.arc_points(c, 1.0, 0, π/2, 16)
+    @test length(pts) >= 2
+    # First point at angle 0
+    @test pts[1].x ≈ 1.0 atol=1e-10
+    @test pts[1].y ≈ 0.0 atol=1e-10
+  end
+
 end

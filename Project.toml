@@ -9,12 +9,14 @@ ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 KhepriBase = "4cc0fe96-1163-46f3-ba32-de1e65d9548f"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
 [compat]
-CairoMakie = "0.11, 0.12, 0.13"
+CairoMakie = "0.11 - 0.15"
 ColorTypes = "0.11, 0.12"
 KhepriBase = "0.6"
-Makie = "0.20, 0.21, 0.22"
+Makie = "0.20 - 0.24"
+Reexport = "1"
 julia = "1.9"
 
 [extras]

@@ -23,6 +23,7 @@ const MakieNativeRef = NativeRef{MakieKey, MakieId}
   figure::Union{Nothing,Figure}=nothing
   axis::Union{Nothing,Union{Axis,Axis3,LScene}}=nothing
   use_3d::Bool=true
+  transaction::Parameter{KhepriBase.Transaction}=Parameter{KhepriBase.Transaction}(KhepriBase.AutoCommitTransaction())
   refs::References{MakieKey, MakieId}=References{MakieKey, MakieId}()
 end
 
