@@ -10,7 +10,7 @@ using Test
   @testset "Backend initialization" begin
     @test makie isa KhepriBase.Backend
     @test KhepriBase.backend_name(makie) == "Makie"
-    @test KhepriBase.void_ref(makie) isa KhepriBase.NativeRef
+    @test KhepriBase.void_ref(makie) === 0
   end
 
   @testset "Backend fields" begin

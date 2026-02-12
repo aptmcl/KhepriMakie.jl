@@ -2,7 +2,7 @@ export makie
 
 # Backend type definitions
 abstract type MakieKey end
-const MakieId = Any
+const MakieId = Int
 const MakieIds = Vector{MakieId}
 const MakieRef = GenericRef{MakieKey, MakieId}
 const MakieRefs = Vector{MakieRef}
@@ -23,14 +23,23 @@ const MakieNativeRef = NativeRef{MakieKey, MakieId}
   figure::Union{Nothing,Figure}=nothing
   axis::Union{Nothing,Union{Axis,Axis3,LScene}}=nothing
   use_3d::Bool=true
+  next_id::Int=1
+  scene_dirty::Bool=false
   transaction::Parameter{KhepriBase.Transaction}=Parameter{KhepriBase.Transaction}(KhepriBase.AutoCommitTransaction())
   refs::References{MakieKey, MakieId}=References{MakieKey, MakieId}()
 end
 
 const MKE = MakieBackend
 
+function next_ref!(b::MKE)
+  id = b.next_id
+  b.next_id += 1
+  id
+end
+
 KhepriBase.backend_name(b::MKE) = "Makie"
-KhepriBase.void_ref(b::MKE) = MakieNativeRef(nothing)
+KhepriBase.void_ref(b::MKE) = 0
+KhepriBase.view_type(::Type{MKE}) = FrontendView()
 
 # Scene creation and management
 function create_makie_scene_2d()
@@ -42,7 +51,7 @@ end
 
 function create_makie_scene_3d()
   fig = Figure(size=(800, 600))
-  ax = LScene(fig[1,1], show_axis=false)
+  ax = LScene(fig[1,1], show_axis=true)
   fig, ax
 end
 
@@ -53,7 +62,7 @@ function ensure_scene(b::MKE)
     else
       b.figure, b.axis = create_makie_scene_2d()
     end
-    display(b.figure)
+    # Don't display here - let the user call display when ready
   end
   b.axis
 end
@@ -112,13 +121,16 @@ end
 
 # Primitives
 KhepriBase.b_point(b::MKE, p, mat) =
-  scatter!(ensure_scene(b), [mkpoint(p)], color=mkcolor(mat), markersize=5)
+  (scatter!(ensure_scene(b), [mkpoint(p)], color=mkcolor(mat), markersize=5);
+   next_ref!(b))
 
 KhepriBase.b_line(b::MKE, ps, mat) =
-  lines!(ensure_scene(b), mkpoints(ps), color=mkcolor(mat))
+  (lines!(ensure_scene(b), mkpoints(ps), color=mkcolor(mat));
+   next_ref!(b))
 
 KhepriBase.b_polygon(b::MKE, ps, mat) =
-  lines!(ensure_scene(b), mkpoints([ps..., ps[1]]), color=mkcolor(mat))
+  (lines!(ensure_scene(b), mkpoints([ps..., ps[1]]), color=mkcolor(mat));
+   next_ref!(b))
 
 # Splines - approximate with line segments
 function spline_points(ps, n=64)
@@ -142,11 +154,13 @@ function spline_points(ps, n=64)
 end
 
 KhepriBase.b_spline(b::MKE, ps, v0, v1, mat) =
-  lines!(ensure_scene(b), mkpoints(spline_points(ps)), color=mkcolor(mat))
+  (lines!(ensure_scene(b), mkpoints(spline_points(ps)), color=mkcolor(mat));
+   next_ref!(b))
 
 KhepriBase.b_closed_spline(b::MKE, ps, mat) =
   let pts = spline_points([ps..., ps[1], ps[2]])
     lines!(ensure_scene(b), mkpoints(pts), color=mkcolor(mat))
+    next_ref!(b)
   end
 
 # Circle and arc using parametric sampling
@@ -159,10 +173,12 @@ function arc_points(c, r, α, Δα, n=32)
 end
 
 KhepriBase.b_circle(b::MKE, c, r, mat) =
-  lines!(ensure_scene(b), mkpoints(circle_points(c, r)), color=mkcolor(mat))
+  (lines!(ensure_scene(b), mkpoints(circle_points(c, r)), color=mkcolor(mat));
+   next_ref!(b))
 
 KhepriBase.b_arc(b::MKE, c, r, α, Δα, mat) =
-  lines!(ensure_scene(b), mkpoints(arc_points(c, r, α, Δα)), color=mkcolor(mat))
+  (lines!(ensure_scene(b), mkpoints(arc_points(c, r, α, Δα)), color=mkcolor(mat));
+   next_ref!(b))
 
 # Rectangle
 KhepriBase.b_rectangle(b::MKE, c, dx, dy, mat) =
@@ -171,6 +187,7 @@ KhepriBase.b_rectangle(b::MKE, c, dx, dy, mat) =
       p3 = add_xy(c, dx, dy),
       p4 = add_y(c, dy)
     lines!(ensure_scene(b), mkpoints([p1, p2, p3, p4, p1]), color=mkcolor(mat))
+    next_ref!(b)
   end
 
 # Triangles and quads - using mesh
@@ -178,12 +195,14 @@ KhepriBase.b_trig(b::MKE, p1, p2, p3, mat) =
   let vertices = mkpoints([p1, p2, p3]),
       faces = [1 2 3]
     mesh!(ensure_scene(b), vertices, faces, color=mkcolor(mat))
+    next_ref!(b)
   end
 
 KhepriBase.b_quad(b::MKE, p1, p2, p3, p4, mat) =
   let vertices = mkpoints([p1, p2, p3, p4]),
       faces = [1 2 3; 1 3 4]  # Two triangles
     mesh!(ensure_scene(b), vertices, faces, color=mkcolor(mat))
+    next_ref!(b)
   end
 
 KhepriBase.b_ngon(b::MKE, ps, pivot, smooth, mat) =
@@ -191,6 +210,7 @@ KhepriBase.b_ngon(b::MKE, ps, pivot, smooth, mat) =
       vertices = mkpoints([pivot, ps...]),
       faces = hcat([[1, i+1, i+2] for i in 1:n-1]..., [1, n+1, 2])'
     mesh!(ensure_scene(b), vertices, faces, color=mkcolor(mat))
+    next_ref!(b)
   end
 
 # Quad strips
@@ -201,6 +221,7 @@ KhepriBase.b_quad_strip(b::MKE, ps, qs, smooth, mat) =
     # Convert to triangles
     tris = vcat([[f[1] f[2] f[3]; f[1] f[3] f[4]] for f in eachrow(reshape(faces, :, 4))]...)
     mesh!(ensure_scene(b), vertices, tris, color=mkcolor(mat))
+    next_ref!(b)
   end
 
 KhepriBase.b_quad_strip_closed(b::MKE, ps, qs, smooth, mat) =
@@ -209,13 +230,14 @@ KhepriBase.b_quad_strip_closed(b::MKE, ps, qs, smooth, mat) =
       quads = [[i, i%n+1, n+i%n+1, n+i] for i in 1:n],
       tris = vcat([[q[1] q[2] q[3]; q[1] q[3] q[4]] for q in quads]...)
     mesh!(ensure_scene(b), vertices, tris, color=mkcolor(mat))
+    next_ref!(b)
   end
 
 # Surfaces
 KhepriBase.b_surface_polygon(b::MKE, ps, mat) =
   let n = length(ps)
     if n < 3
-      return nothing
+      return void_ref(b)
     elseif n == 3
       b_trig(b, ps[1], ps[2], ps[3], mat)
     else
@@ -223,6 +245,7 @@ KhepriBase.b_surface_polygon(b::MKE, ps, mat) =
       vertices = mkpoints(ps)
       faces = hcat([[1, i, i+1] for i in 2:n-1]...)'
       mesh!(ensure_scene(b), vertices, faces, color=mkcolor(mat))
+      next_ref!(b)
     end
   end
 
@@ -253,10 +276,11 @@ KhepriBase.b_surface_grid(b::MKE, ptss, closed_u, closed_v, smooth_u, smooth_v, 
       wrap_i(i) = closed_u ? mod1(i, nu) : i,
       wrap_j(j) = closed_v ? mod1(j, nv) : j
     if isempty(quads)
-      return nothing
+      return void_ref(b)
     end
     tris = vcat([[q[1] q[2] q[3]; q[1] q[3] q[4]] for q in quads]...)
     mesh!(ensure_scene(b), vertices, tris, color=mkcolor(mat))
+    next_ref!(b)
   end
 
 # Closed spline surface
@@ -267,12 +291,14 @@ KhepriBase.b_surface_closed_spline(b::MKE, ps, mat) =
 
 # 3D Solids
 KhepriBase.b_sphere(b::MKE, c, r, mat) =
-  let u = range(0, 2π, length=32),
+  let p = in_world(c),
+      u = range(0, 2π, length=32),
       v = range(0, π, length=16),
-      x = [c.x + r * cos(θ) * sin(φ) for θ in u, φ in v],
-      y = [c.y + r * sin(θ) * sin(φ) for θ in u, φ in v],
-      z = [c.z + r * cos(φ) for θ in u, φ in v]
+      x = [p.x + r * cos(θ) * sin(φ) for θ in u, φ in v],
+      y = [p.y + r * sin(θ) * sin(φ) for θ in u, φ in v],
+      z = [p.z + r * cos(φ) for θ in u, φ in v]
     surface!(ensure_scene(b), x, y, z, color=mkcolor(mat))
+    next_ref!(b)
   end
 
 KhepriBase.b_box(b::MKE, c, dx, dy, dz, mat) =
@@ -295,6 +321,7 @@ KhepriBase.b_box(b::MKE, c, dx, dy, dz, mat) =
         2 6 7; 2 7 3;   # right
       ]
     mesh!(ensure_scene(b), vertices, faces, color=mkcolor(mat))
+    next_ref!(b)
   end
 
 KhepriBase.b_cylinder(b::MKE, cb, r, h, bmat, tmat, smat) =
@@ -315,6 +342,7 @@ KhepriBase.b_cylinder(b::MKE, cb, r, h, bmat, tmat, smat) =
     top_tris = hcat([[center_t, n+mod1(i, n)+1, n+i] for i in 1:n]...)'
     all_tris = vcat(side_tris, bottom_tris, top_tris)
     mesh!(ensure_scene(b), vertices, all_tris, color=mkcolor(smat))
+    next_ref!(b)
   end
 
 KhepriBase.b_cone(b::MKE, cb, r, h, bmat, smat) =
@@ -329,6 +357,7 @@ KhepriBase.b_cone(b::MKE, cb, r, h, bmat, smat) =
       # Bottom cap
       bottom_tris = hcat([[center_idx, mod1(i, n)+1, i] for i in 1:n]...)'
     mesh!(ensure_scene(b), vertices, vcat(side_tris, bottom_tris), color=mkcolor(smat))
+    next_ref!(b)
   end
 
 KhepriBase.b_cone_frustum(b::MKE, cb, rb, h, rt, bmat, tmat, smat) =
@@ -348,12 +377,14 @@ KhepriBase.b_cone_frustum(b::MKE, cb, rb, h, rt, bmat, tmat, smat) =
         bottom_tris = hcat([[center_b, mod1(i, n)+1, i] for i in 1:n]...)',
         top_tris = hcat([[center_t, n+i, n+mod1(i, n)+1] for i in 1:n]...)'
       mesh!(ensure_scene(b), vertices, vcat(side_tris, bottom_tris, top_tris), color=mkcolor(smat))
+      next_ref!(b)
     end
   end
 
 # Text
 KhepriBase.b_text(b::MKE, str, p, size, mat) =
-  text!(ensure_scene(b), mkpoint(p), text=str, fontsize=size, color=mkcolor(mat))
+  (text!(ensure_scene(b), mkpoint(p), text=str, fontsize=size, color=mkcolor(mat));
+   next_ref!(b))
 
 # View and rendering
 KhepriBase.b_set_view(b::MKE, camera, target, lens, aperture) =
@@ -373,20 +404,44 @@ KhepriBase.b_zoom_extents(b::MKE) =
   end
 
 KhepriBase.b_render_view(b::MKE, path) =
-  if !isnothing(b.figure)
-    save(path, b.figure)
-    path
+  begin
+    if b.scene_dirty
+      rebuild_scene!(b)
+    end
+    if !isnothing(b.figure)
+      save(path, b.figure)
+      path
+    end
   end
 
 KhepriBase.b_render_and_save_view(b::MKE, path) =
   b_render_view(b, path)
 
 # Delete operations
+KhepriBase.b_delete_ref(b::MKE, r::MakieId) =
+  b.scene_dirty = true
+
+function rebuild_scene!(b::MKE)
+  if !isnothing(b.axis)
+    empty!(b.axis)
+  end
+  b.next_id = 1
+  b.scene_dirty = false
+  let shapes = collect(keys(b.refs.shapes))
+    empty!(b.refs.shapes)
+    for s in shapes
+      force_realize(b, s)
+    end
+  end
+end
+
 KhepriBase.b_delete_all_shape_refs(b::MKE) =
   begin
     if !isnothing(b.axis)
       empty!(b.axis)
     end
+    b.next_id = 1
+    b.scene_dirty = false
     nothing
   end
 
