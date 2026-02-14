@@ -113,11 +113,8 @@ using Test
         makie.scene_dirty = false
         backend(makie)
       end,
-      # :curves -- spline_points has type error with Loc multiplication
-      # :solids -- b_torus triggers BoundsError in b_surface_grid mesh indexing
-      # :highlevel/:refs/:delete -- layer system returns String refs (not MakieId=Int)
-      # :advanced -- depends on high-level API
-      skip = [:curves, :solids, :highlevel, :refs, :delete, :advanced]
+      # Makie's layer system returns String refs (not MakieId=Int)
+      skip = [:highlevel, :refs, :delete, :advanced]
     )
   end
 

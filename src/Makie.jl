@@ -132,21 +132,22 @@ KhepriBase.b_polygon(b::MKE, ps, mat) =
   (lines!(ensure_scene(b), mkpoints([ps..., ps[1]]), color=mkcolor(mat));
    next_ref!(b))
 
-# Splines - approximate with line segments
+# Splines - approximate with line segments via Catmull-Rom
+# Locs don't support scalar multiplication, so we work with Vecs
+# (displacements from world origin) and convert back.
 function spline_points(ps, n=64)
-  # Simple Catmull-Rom approximation
   length(ps) < 2 && return ps
+  o = u0()
   result = Loc[]
   for i in 1:length(ps)-1
-    p0 = i > 1 ? ps[i-1] : ps[i]
-    p1 = ps[i]
-    p2 = ps[i+1]
-    p3 = i < length(ps)-1 ? ps[i+2] : ps[i+1]
+    v0 = (i > 1 ? ps[i-1] : ps[i]) - o
+    v1 = ps[i] - o
+    v2 = ps[i+1] - o
+    v3 = (i < length(ps)-1 ? ps[i+2] : ps[i+1]) - o
     for t in range(0, 1, length=n÷(length(ps)-1))
-      # Catmull-Rom interpolation
       t2, t3 = t*t, t*t*t
-      v = 0.5 * (2*p1 + (-p0 + p2)*t + (2*p0 - 5*p1 + 4*p2 - p3)*t2 + (-p0 + 3*p1 - 3*p2 + p3)*t3)
-      push!(result, v)
+      v = 0.5*(2*v1 + (-v0 + v2)*t + (2*v0 - 5*v1 + 4*v2 - v3)*t2 + (-v0 + 3*v1 - 3*v2 + v3)*t3)
+      push!(result, o + v)
     end
   end
   push!(result, ps[end])
@@ -269,12 +270,14 @@ KhepriBase.b_surface_grid(b::MKE, ptss, closed_u, closed_v, smooth_u, smooth_v, 
   let (nu, nv) = size(ptss),
       vertices = mkpoints(vec(ptss)),
       idx(i, j) = (i-1)*nv + j,
-      quads = [(idx(i,j), idx(i+1,j), idx(i+1,j+1), idx(i,j+1))
-               for i in 1:(closed_u ? nu : nu-1)
-               for j in 1:(closed_v ? nv : nv-1)],
-      # Handle wraparound for closed surfaces
       wrap_i(i) = closed_u ? mod1(i, nu) : i,
-      wrap_j(j) = closed_v ? mod1(j, nv) : j
+      wrap_j(j) = closed_v ? mod1(j, nv) : j,
+      quads = [(idx(wrap_i(i), wrap_j(j)),
+                idx(wrap_i(i+1), wrap_j(j)),
+                idx(wrap_i(i+1), wrap_j(j+1)),
+                idx(wrap_i(i), wrap_j(j+1)))
+               for i in 1:(closed_u ? nu : nu-1)
+               for j in 1:(closed_v ? nv : nv-1)]
     if isempty(quads)
       return void_ref(b)
     end
