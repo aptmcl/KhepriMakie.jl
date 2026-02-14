@@ -11,7 +11,6 @@ const MakieNativeRef = NativeRef{MakieKey, MakieId}
 # Backend structure
 @kwdef mutable struct MakieBackend <: Backend{MakieKey, MakieId}
   shapes::Shapes=Shape[]
-  current_layer::Union{Nothing,AbstractLayer}=nothing
   layers::Dict{AbstractLayer,Vector{Shape}}=Dict{AbstractLayer,Vector{Shape}}()
   date::DateTime=DateTime(2020, 9, 21, 10, 0, 0)
   place::GeographicLocation=GeographicLocation(39, 9, 0, 0)
@@ -25,6 +24,10 @@ const MakieNativeRef = NativeRef{MakieKey, MakieId}
   use_3d::Bool=true
   next_id::Int=1
   scene_dirty::Bool=false
+  # Layer system (integer IDs)
+  layer_names::Dict{MakieId, String}=Dict{MakieId, String}(1 => "default")
+  current_layer_id::MakieId=1
+  next_layer_id::Int=2
   transaction::Parameter{KhepriBase.Transaction}=Parameter{KhepriBase.Transaction}(KhepriBase.AutoCommitTransaction())
   refs::References{MakieKey, MakieId}=References{MakieKey, MakieId}()
 end
@@ -448,12 +451,21 @@ KhepriBase.b_delete_all_shape_refs(b::MKE) =
     nothing
   end
 
-# Layer operations (minimal implementation)
-KhepriBase.b_layer(b::MKE, name, active, color) = name
+# Layer operations (integer-based IDs)
+KhepriBase.b_layer(b::MKE, name, active, color) =
+  let id = b.next_layer_id
+    b.next_layer_id += 1
+    b.layer_names[id] = name
+    id
+  end
 
-KhepriBase.b_current_layer_ref(b::MKE) = "default"
+KhepriBase.b_current_layer_ref(b::MKE) = b.current_layer_id
 
-KhepriBase.b_current_layer_ref(b::MKE, layer) = layer
+KhepriBase.b_current_layer_ref(b::MKE, layer_id) =
+  (b.current_layer_id = layer_id; nothing)
+
+KhepriBase.b_create_layer_from_ref_value(b::MKE, r) =
+  layer(get(b.layer_names, r, "default"))
 
 KhepriBase.b_delete_all_shapes_in_layer(b::MKE, layer) = nothing
 

@@ -111,10 +111,12 @@ using Test
         makie.axis = nothing
         makie.next_id = 1
         makie.scene_dirty = false
+        makie.layer_names = Dict(1 => "default")
+        makie.current_layer_id = 1
+        makie.next_layer_id = 2
         backend(makie)
       end,
-      # Makie's layer system returns String refs (not MakieId=Int)
-      skip = [:highlevel, :refs, :delete, :advanced]
+      skip = Symbol[]
     )
   end
 
