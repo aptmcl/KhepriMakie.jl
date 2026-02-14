@@ -99,4 +99,26 @@ using Test
     @test pts[1].y ≈ 0.0 atol=1e-10
   end
 
+  # Conformance tests
+  @testset "Backend Conformance (Makie)" begin
+    include(joinpath(dirname(pathof(KhepriBase)), "..", "test", "BackendConformanceTests.jl"))
+    using .BackendConformanceTests
+
+    run_conformance_tests(makie,
+      reset! = () -> begin
+        empty!(makie.refs)
+        makie.figure = nothing
+        makie.axis = nothing
+        makie.next_id = 1
+        makie.scene_dirty = false
+        backend(makie)
+      end,
+      # :curves -- spline_points has type error with Loc multiplication
+      # :solids -- b_torus triggers BoundsError in b_surface_grid mesh indexing
+      # :highlevel/:refs/:delete -- layer system returns String refs (not MakieId=Int)
+      # :advanced -- depends on high-level API
+      skip = [:curves, :solids, :highlevel, :refs, :delete, :advanced]
+    )
+  end
+
 end

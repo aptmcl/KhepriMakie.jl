@@ -47,6 +47,17 @@ println("Use update_view() to refresh the display.")
 println("Use clear_view() to clear all geometry.")
 
 # Force display update
-update_view()
+println()
+println("Refreshing display...")
+if !isnothing(makie.figure)
+    display(makie.figure)
+    println("Figure refreshed!")
+else
+    println("ERROR: No figure created!")
+end
+
+# Keep window open
+println("\nPress Enter to exit...")
+readline()
 
 println("Done!")
