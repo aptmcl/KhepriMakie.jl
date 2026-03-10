@@ -14,15 +14,15 @@ using Test
   end
 
   @testset "Backend fields" begin
-    @test hasfield(typeof(makie), :refs)
+    @test hasproperty(makie, :refs)
     @test makie.refs isa KhepriBase.References
-    @test hasfield(typeof(makie), :shapes)
-    @test hasfield(typeof(makie), :layers)
-    @test hasfield(typeof(makie), :view)
-    @test hasfield(typeof(makie), :figure)
-    @test hasfield(typeof(makie), :axis)
-    @test hasfield(typeof(makie), :use_3d)
-    @test hasfield(typeof(makie), :transaction)
+    @test hasproperty(makie, :shapes)
+    @test hasproperty(makie, :layers)
+    @test hasproperty(makie, :view)
+    @test hasproperty(makie, :figure)
+    @test hasproperty(makie, :axis)
+    @test hasproperty(makie, :use_3d)
+    @test hasproperty(makie, :transaction)
   end
 
   @testset "Lazy initialization" begin
@@ -60,10 +60,10 @@ using Test
   end
 
   @testset "Render settings" begin
-    @test hasfield(typeof(makie), :date)
-    @test hasfield(typeof(makie), :place)
-    @test hasfield(typeof(makie), :render_env)
-    @test hasfield(typeof(makie), :ground_level)
+    @test hasproperty(makie, :date)
+    @test hasproperty(makie, :place)
+    @test hasproperty(makie, :render_env)
+    @test hasproperty(makie, :ground_level)
   end
 
   @testset "Coordinate conversion" begin

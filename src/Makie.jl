@@ -1,38 +1,22 @@
 export makie
 
-# Backend type definitions
-abstract type MakieKey end
-const MakieId = Int
-const MakieIds = Vector{MakieId}
-const MakieRef = GenericRef{MakieKey, MakieId}
-const MakieRefs = Vector{MakieRef}
-const MakieNativeRef = NativeRef{MakieKey, MakieId}
-
-# Backend structure
-@kwdef mutable struct MakieBackend <: Backend{MakieKey, MakieId}
-  shapes::Shapes=Shape[]
-  layers::Dict{AbstractLayer,Vector{Shape}}=Dict{AbstractLayer,Vector{Shape}}()
-  date::DateTime=DateTime(2020, 9, 21, 10, 0, 0)
-  place::GeographicLocation=GeographicLocation(39, 9, 0, 0)
-  render_env::RenderEnvironment=RealisticSkyEnvironment(5, true)
-  ground_level::Float64=0.0
-  ground_material::Union{Nothing,Material}=nothing
-  view::View=top_view()
-  # Makie scene objects
-  figure::Union{Nothing,Figure}=nothing
-  axis::Union{Nothing,Union{Axis,Axis3,LScene}}=nothing
-  use_3d::Bool=true
-  next_id::Int=1
-  scene_dirty::Bool=false
-  # Layer system (integer IDs)
-  layer_names::Dict{MakieId, String}=Dict{MakieId, String}(1 => "default")
-  current_layer_id::MakieId=1
-  next_layer_id::Int=2
-  transaction::Parameter{KhepriBase.Transaction}=Parameter{KhepriBase.Transaction}(KhepriBase.AutoCommitTransaction())
-  refs::References{MakieKey, MakieId}=References{MakieKey, MakieId}()
+@defbackend Makie MKE begin
+  id_type = Int
+  void_ref = 0
+  view_type = FrontendView()
+  mixin(render_state)
+  shapes::Shapes = Shape[]
+  layers::Dict{AbstractLayer,Vector{Shape}} = Dict{AbstractLayer,Vector{Shape}}()
+  view::View = top_view()
+  figure::Union{Nothing,Figure} = nothing
+  axis::Union{Nothing,Union{Axis,Axis3,LScene}} = nothing
+  use_3d::Bool = true
+  next_id::Int = 1
+  scene_dirty::Bool = false
+  layer_names::Dict{Int, String} = Dict{Int, String}(1 => "default")
+  current_layer_id::Int = 1
+  next_layer_id::Int = 2
 end
-
-const MKE = MakieBackend
 
 function next_ref!(b::MKE)
   id = b.next_id
@@ -40,9 +24,6 @@ function next_ref!(b::MKE)
   id
 end
 
-KhepriBase.backend_name(b::MKE) = "Makie"
-KhepriBase.void_ref(b::MKE) = 0
-KhepriBase.view_type(::Type{MKE}) = FrontendView()
 
 # Scene creation and management
 function create_makie_scene_2d()
