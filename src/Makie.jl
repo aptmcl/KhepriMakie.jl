@@ -451,14 +451,7 @@ KhepriBase.b_create_layer_from_ref_value(b::MKE, r) =
 KhepriBase.b_delete_all_shapes_in_layer(b::MKE, layer) = nothing
 
 # Materials (visualization backend - colors only)
-KhepriBase.b_new_material(b::MKE, name, base_color, metallic, specular, roughness,
-                          clearcoat, clearcoat_roughness, ior, transmission,
-                          transmission_roughness, emission_color, emission_strength,
-                          sheen_color, sheen_roughness,
-                          anisotropy, anisotropy_direction,
-                          ambient_occlusion, normal_map, bent_normal, clearcoat_normal,
-                          post_lighting_color,
-                          absorption, micro_thickness, thickness) =
+KhepriBase.b_material(b::MKE, name, base_color, metallic, roughness, specular) =
   base_color  # Just return the color for visualization
 
 KhepriBase.b_plastic_material(b::MKE, name, color, roughness) = color
